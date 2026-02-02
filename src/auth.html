@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Store - Login & Sign Up</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><a href="index.html">Car Store</a></div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html"><span class="nav-icon">🏠</span> Home</a></li>
+          <li><a href="cars.html"><span class="nav-icon">🚗</span> Cars</a></li>
+          <li><a href="auth.html"><span class="nav-icon">🔐</span> Login</a></li>
+          <li><a href="orders.html"><span class="nav-icon">📋</span> My Orders</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user"><a href="index.html" class="btn btn-secondary">Back</a></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="main-header">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menu">☰</button>
+        <h1>Login & Sign Up</h1>
+      </header>
+
+      <div class="main-content">
+        <div class="card" style="max-width:400px;margin:2rem auto;">
+          <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login">Login</button>
+            <button class="auth-tab" data-tab="signup">Sign Up</button>
+          </div>
+          <div id="alert-area"></div>
+          <div id="panel-login">
+            <form id="login-form">
+              <div class="form-group"><label>Email</label><input type="email" id="login-email" required placeholder="you@example.com"></div>
+              <div class="form-group"><label>Password</label><input type="password" id="login-password" required placeholder="••••••••"></div>
+              <button type="submit" class="btn btn-primary" style="width:100%;">Login</button>
+            </form>
+          </div>
+          <div id="panel-signup" style="display:none;">
+            <form id="signup-form">
+              <div class="form-group"><label>Name</label><input type="text" id="signup-name" required placeholder="Your name"></div>
+              <div class="form-group"><label>Email</label><input type="email" id="signup-email" required placeholder="you@example.com"></div>
+              <div class="form-group"><label>Password</label><input type="password" id="signup-password" required placeholder="••••••••"></div>
+              <button type="submit" class="btn btn-primary" style="width:100%;">Create Account</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="nav.js"></script>
+  <script>
+    (function() {
+      const redirect = new URLSearchParams(location.search).get('redirect') || 'index.html';
+      document.querySelectorAll('.auth-tab').forEach(tab => {
+        tab.onclick = () => {
+          document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById('panel-login').style.display = tab.dataset.tab === 'login' ? 'block' : 'none';
+          document.getElementById('panel-signup').style.display = tab.dataset.tab === 'signup' ? 'block' : 'none';
+          document.getElementById('alert-area').innerHTML = '';
+        };
+      });
+      function showAlert(msg, type) { document.getElementById('alert-area').innerHTML = `<div class="alert alert-${type}">${msg}</div>`; }
+      document.getElementById('login-form').onsubmit = (e) => {
+        e.preventDefault();
+        api.login(document.getElementById('login-email').value, document.getElementById('login-password').value)
+          .then(data => {
+            localStorage.setItem('user', JSON.stringify({ id: data.user_id, email: data.email, name: data.name }));
+            showAlert('Login successful!', 'success');
+            setTimeout(() => location.href = redirect, 800);
+          })
+          .catch(err => showAlert(err.message, 'error'));
+      };
+      document.getElementById('signup-form').onsubmit = (e) => {
+        e.preventDefault();
+        const name = document.getElementById('signup-name').value.trim();
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        api.signup(name, email, password)
+          .then(() => { showAlert('Account created! Please log in.', 'success'); document.querySelector('[data-tab="login"]').click(); })
+          .catch(err => showAlert(err.message, 'error'));
+      };
+    })();
+  </script>
+</body>
+</html>

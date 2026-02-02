@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Store</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><a href="index.html">Car Store</a></div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html" class="active"><span class="nav-icon">🏠</span> Home</a></li>
+          <li><a href="cars.html"><span class="nav-icon">🚗</span> Cars</a></li>
+          <li><a href="auth.html"><span class="nav-icon">🔐</span> Login</a></li>
+          <li><a href="orders.html"><span class="nav-icon">📋</span> My Orders</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <span id="user-name"></span>
+          <a href="auth.html" class="btn btn-secondary" id="auth-btn">Login</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="main-header">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menu">☰</button>
+        <h1>Home</h1>
+      </header>
+
+      <div class="main-content">
+        <section class="hero-split">
+          <div class="hero-text">
+            <h1>Find Your Dream Car</h1>
+            <p>Browse our inventory and drive away today. Simple, fast, transparent.</p>
+            <a href="cars.html" class="btn btn-primary">Browse Cars</a>
+          </div>
+          <div class="hero-visual">🚗</div>
+        </section>
+
+        <h2 class="section-title">Featured Cars</h2>
+        <div class="bento-grid" id="featured-cars">
+          <div class="loading">Loading cars...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="nav.js"></script>
+  <script>
+    (function() {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      const authBtn = document.getElementById('auth-btn');
+      const userName = document.getElementById('user-name');
+      if (user) {
+        userName.textContent = user.name || user.email;
+        authBtn.textContent = 'Logout';
+        authBtn.href = '#';
+        authBtn.onclick = () => { localStorage.removeItem('user'); location.reload(); };
+      }
+
+      api.getCars()
+        .then(cars => {
+          const el = document.getElementById('featured-cars');
+          const featured = cars.slice(0, 6);
+          if (featured.length === 0) {
+            el.innerHTML = '<div class="empty-state bento-item span-2">No cars yet. <a href="cars.html">Add cars</a>!</div>';
+            return;
+          }
+          el.innerHTML = featured.map((c, i) => {
+            const isHero = i === 0;
+            return `
+              <a href="cars.html?id=${c.id}" class="bento-item car-card ${isHero ? 'hero-card span-2 row-2' : ''}">
+                <div class="car-card-image">🚗</div>
+                <div class="car-card-body">
+                  <h3>${c.make} ${c.model}</h3>
+                  <div class="meta">${c.year} • ${c.mileage.toLocaleString()} mi • ${c.condition}</div>
+                  <div class="price">$${c.price.toLocaleString()}</div>
+                </div>
+              </a>
+            `;
+          }).join('');
+        })
+        .catch(err => {
+          document.getElementById('featured-cars').innerHTML =
+            `<div class="alert alert-error bento-item span-2">${err.message}. Is the API running on port 8000?</div>`;
+        });
+    })();
+  </script>
+</body>
+</html>

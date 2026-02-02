@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Store - Cars</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><a href="index.html">Car Store</a></div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html"><span class="nav-icon">🏠</span> Home</a></li>
+          <li><a href="cars.html"><span class="nav-icon">🚗</span> Cars</a></li>
+          <li><a href="auth.html"><span class="nav-icon">🔐</span> Login</a></li>
+          <li><a href="orders.html"><span class="nav-icon">📋</span> My Orders</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <span id="user-name"></span>
+          <a href="auth.html" class="btn btn-secondary" id="auth-btn">Login</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="main-header">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menu">☰</button>
+        <h1 id="page-title">Cars</h1>
+        <a href="cars.html" class="btn btn-primary" id="add-btn" style="display:none;">← Back</a>
+        <a href="#" class="btn btn-primary" id="list-add-btn">+ Add Car</a>
+      </header>
+
+      <div class="main-content">
+        <div id="alert-area"></div>
+        <div id="view-detail" style="display:none;"></div>
+        <div id="view-edit" style="display:none;">
+          <div class="card form-layout">
+            <h2 class="section-title">Edit Car</h2>
+            <form id="edit-car-form">
+              <input type="hidden" id="edit-car-id">
+              <div class="form-grid">
+                <div class="form-group"><label>Make</label><input type="text" id="edit-make" required placeholder="Toyota"></div>
+                <div class="form-group"><label>Model</label><input type="text" id="edit-model" required placeholder="Camry"></div>
+                <div class="form-group"><label>Year</label><input type="number" id="edit-year" required min="1900" max="2030" placeholder="2024"></div>
+                <div class="form-group"><label>Price</label><input type="number" id="edit-price" required min="0" step="0.01" placeholder="25000"></div>
+                <div class="form-group"><label>Mileage</label><input type="number" id="edit-mileage" required min="0" placeholder="50000"></div>
+                <div class="form-group"><label>Color</label><input type="text" id="edit-color" required placeholder="Black"></div>
+                <div class="form-group"><label>Condition</label>
+                  <select id="edit-condition">
+                    <option value="New">New</option>
+                    <option value="Used">Used</option>
+                    <option value="Certified">Certified Pre-Owned</option>
+                  </select>
+                </div>
+                <div class="form-group full"><label>Description (optional)</label><textarea id="edit-description" rows="2" placeholder="..."></textarea></div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="#" id="edit-cancel" class="btn btn-secondary">Cancel</a>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div id="view-add" style="display:none;">
+          <div class="card form-layout">
+            <h2 class="section-title">Add Car</h2>
+            <form id="add-car-form">
+              <div class="form-grid">
+                <div class="form-group"><label>Make</label><input type="text" id="car-make" required placeholder="Toyota"></div>
+                <div class="form-group"><label>Model</label><input type="text" id="car-model" required placeholder="Camry"></div>
+                <div class="form-group"><label>Year</label><input type="number" id="car-year" required min="1900" max="2030" placeholder="2024"></div>
+                <div class="form-group"><label>Price</label><input type="number" id="car-price" required min="0" step="0.01" placeholder="25000"></div>
+                <div class="form-group"><label>Mileage</label><input type="number" id="car-mileage" required min="0" placeholder="50000"></div>
+                <div class="form-group"><label>Color</label><input type="text" id="car-color" required placeholder="Black"></div>
+                <div class="form-group"><label>Condition</label>
+                  <select id="car-condition">
+                    <option value="New">New</option>
+                    <option value="Used">Used</option>
+                    <option value="Certified">Certified Pre-Owned</option>
+                  </select>
+                </div>
+                <div class="form-group full"><label>Description (optional)</label><textarea id="car-description" rows="2" placeholder="..."></textarea></div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Add Car</button>
+                <a href="cars.html" class="btn btn-secondary">Cancel</a>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div id="view-list">
+          <div id="stats-section" class="stats-row" style="display:none;margin-bottom:1.5rem;"></div>
+          <div class="cars-grid" id="cars-list"><div class="loading">Loading...</div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="nav.js"></script>
+  <script>
+    (function() {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      const authBtn = document.getElementById('auth-btn');
+      const userName = document.getElementById('user-name');
+      if (user) {
+        userName.textContent = user.name || user.email;
+        authBtn.textContent = 'Logout';
+        authBtn.href = '#';
+        authBtn.onclick = () => { localStorage.removeItem('user'); location.reload(); };
+      }
+
+      const params = new URLSearchParams(location.search);
+      const carId = params.get('id');
+      const showAdd = params.get('add') === '1';
+      const showEdit = params.get('edit') === '1';
+
+      function showAlert(msg, type) {
+        document.getElementById('alert-area').innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+      }
+
+      function showView(name) {
+        ['view-detail', 'view-add', 'view-edit', 'view-list'].forEach(v => { const el = document.getElementById(v); if (el) el.style.display = 'none'; });
+        const target = document.getElementById('view-' + name);
+        if (target) target.style.display = 'block';
+        document.getElementById('add-btn').style.display = name === 'list' ? 'none' : 'inline-flex';
+        document.getElementById('list-add-btn').style.display = name === 'list' ? 'inline-flex' : 'none';
+        document.getElementById('page-title').textContent = name === 'detail' ? 'Car Detail' : name === 'add' ? 'Add Car' : 'Cars';
+      }
+
+      document.getElementById('add-btn').onclick = (e) => { e.preventDefault(); location.href = 'cars.html'; };
+      document.getElementById('list-add-btn').onclick = (e) => {
+        e.preventDefault();
+        location.href = 'cars.html?add=1';
+      };
+
+      if (showAdd) {
+        showView('add');
+        document.getElementById('add-btn').style.display = 'inline-flex';
+      }
+
+      document.getElementById('edit-cancel').onclick = (e) => {
+        e.preventDefault();
+        if (carId) location.href = 'cars.html?id=' + carId;
+        else location.href = 'cars.html';
+      };
+
+      document.getElementById('edit-car-form').onsubmit = (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-car-id').value;
+        const data = {
+          make: document.getElementById('edit-make').value.trim(),
+          model: document.getElementById('edit-model').value.trim(),
+          year: parseInt(document.getElementById('edit-year').value),
+          price: parseFloat(document.getElementById('edit-price').value),
+          mileage: parseInt(document.getElementById('edit-mileage').value),
+          color: document.getElementById('edit-color').value.trim(),
+          condition: document.getElementById('edit-condition').value,
+          description: document.getElementById('edit-description').value.trim() || null,
+        };
+        api.updateCar(id, data)
+          .then(() => { showAlert('Car updated!', 'success'); location.href = 'cars.html?id=' + id; })
+          .catch(err => showAlert(err.message, 'error'));
+      };
+
+      document.getElementById('add-car-form').onsubmit = (e) => {
+        e.preventDefault();
+        const data = {
+          make: document.getElementById('car-make').value.trim(),
+          model: document.getElementById('car-model').value.trim(),
+          year: parseInt(document.getElementById('car-year').value),
+          price: parseFloat(document.getElementById('car-price').value),
+          mileage: parseInt(document.getElementById('car-mileage').value),
+          color: document.getElementById('car-color').value.trim(),
+          condition: document.getElementById('car-condition').value,
+          description: document.getElementById('car-description').value.trim() || null,
+        };
+        api.createCar(data)
+          .then(() => { showAlert('Car added!', 'success'); location.href = 'cars.html'; })
+          .catch(err => showAlert(err.message, 'error'));
+      };
+
+      function renderList() {
+        Promise.all([api.getCars(), api.getCarsStats().catch(() => null)]).then(([cars, stats]) => {
+          const el = document.getElementById('cars-list');
+          if (cars.length === 0) {
+            el.innerHTML = '<div class="empty-state">No cars yet. <a href="cars.html?add=1" class="btn btn-primary" style="margin-top:1rem;">Add Car</a></div>';
+            return;
+          }
+          el.innerHTML = cars.map(c => `
+            <div class="car-card">
+              <a href="cars.html?id=${c.id}" style="text-decoration:none;color:inherit;">
+                <div class="car-card-image">🚗</div>
+                <div class="car-card-body">
+                  <h3>${c.make} ${c.model}</h3>
+                  <div class="meta">${c.year} • ${c.color} • ${c.mileage.toLocaleString()} mi</div>
+                  <div class="price">$${c.price.toLocaleString()}</div>
+                </div>
+              </a>
+              <div class="car-card-actions">
+                <a href="cars.html?id=${c.id}&edit=1" class="btn btn-secondary" style="padding:0.4rem 0.8rem;">Edit</a>
+                <button class="btn btn-danger btn-delete" data-id="${c.id}" style="padding:0.4rem 0.8rem;">Delete</button>
+              </div>
+            </div>
+          `).join('');
+          el.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.onclick = (e) => {
+              e.preventDefault();
+              if (!confirm('Delete this car?')) return;
+              api.deleteCar(btn.dataset.id).then(() => location.reload()).catch(err => alert(err.message));
+            };
+          });
+
+          if (stats) {
+            const statsEl = document.getElementById('stats-section');
+            statsEl.style.display = 'flex';
+            const parts = [];
+            if (stats.total_cars) parts.push(`<span class="stats-chip"><strong>Total:</strong> ${stats.total_cars} cars</span>`);
+            if (stats.price_range?.min != null) parts.push(`<span class="stats-chip"><strong>Price:</strong> $${stats.price_range.min.toLocaleString()} - $${stats.price_range.max.toLocaleString()}</span>`);
+            if (stats.by_make?.length) parts.push(`<span class="stats-chip"><strong>Makes:</strong> ${stats.by_make.slice(0, 3).map(m => m.make).join(', ')}</span>`);
+            statsEl.innerHTML = parts.join('');
+          }
+        }).catch(err => document.getElementById('cars-list').innerHTML = `<div class="alert alert-error">${err.message}</div>`);
+      }
+
+      if (carId && showEdit) {
+        showView('edit');
+        document.getElementById('add-btn').style.display = 'inline-flex';
+        api.getCar(carId).then(car => {
+          document.getElementById('edit-car-id').value = car.id;
+          document.getElementById('edit-make').value = car.make;
+          document.getElementById('edit-model').value = car.model;
+          document.getElementById('edit-year').value = car.year;
+          document.getElementById('edit-price').value = car.price;
+          document.getElementById('edit-mileage').value = car.mileage;
+          document.getElementById('edit-color').value = car.color;
+          document.getElementById('edit-condition').value = car.condition;
+          document.getElementById('edit-description').value = car.description || '';
+        }).catch(err => document.getElementById('alert-area').innerHTML = `<div class="alert alert-error">${err.message}</div>`);
+      } else if (carId) {
+        showView('detail');
+        api.getCar(carId).then(car => {
+          document.getElementById('view-detail').innerHTML = `
+            <div class="card">
+              <div class="detail-layout">
+                <div class="detail-visual">🚗</div>
+                <div class="detail-info">
+                  <h1>${car.make} ${car.model}</h1>
+                  <p style="color:var(--color-text-muted);">${car.year} • ${car.color} • ${car.condition}</p>
+                  <div class="price-tag">$${car.price.toLocaleString()}</div>
+                  <p><strong>Mileage:</strong> ${car.mileage.toLocaleString()} mi</p>
+                  <p style="margin-top:0.75rem;color:var(--color-text-muted);">${car.description || 'No description.'}</p>
+                  <div class="detail-actions">
+                    <a href="cars.html?id=${car.id}&edit=1" class="btn btn-secondary">Edit</a>
+                    <button class="btn btn-primary" id="buy-btn">Buy</button>
+                    <button class="btn btn-danger" id="delete-btn">Delete</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          document.getElementById('buy-btn').onclick = () => {
+            if (!user) { alert('Please log in.'); location.href = 'auth.html?redirect=' + encodeURIComponent(location.href); return; }
+            api.createOrder(car.id, user.id, car.price).then(() => { alert('Order placed!'); location.href = 'orders.html'; }).catch(err => alert(err.message));
+          };
+          document.getElementById('delete-btn').onclick = () => {
+            if (!confirm('Delete this car?')) return;
+            api.deleteCar(car.id).then(() => location.href = 'cars.html').catch(err => alert(err.message));
+          };
+        }).catch(err => document.getElementById('view-detail').innerHTML = `<div class="alert alert-error">${err.message}</div>`);
+      } else if (!showAdd) {
+        renderList();
+      }
+    })();
+  </script>
+</body>
+</html>

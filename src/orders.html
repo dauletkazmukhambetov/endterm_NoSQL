@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Store - My Orders</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><a href="index.html">Car Store</a></div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html"><span class="nav-icon">🏠</span> Home</a></li>
+          <li><a href="cars.html"><span class="nav-icon">🚗</span> Cars</a></li>
+          <li><a href="auth.html"><span class="nav-icon">🔐</span> Login</a></li>
+          <li><a href="orders.html"><span class="nav-icon">📋</span> My Orders</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <span id="user-name"></span>
+          <a href="auth.html" class="btn btn-secondary" id="auth-btn">Login</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="main-header">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menu">☰</button>
+        <h1>My Orders</h1>
+      </header>
+
+      <div class="main-content">
+        <div id="orders-content"><div class="loading">Loading...</div></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="nav.js"></script>
+  <script>
+    (function() {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      const authBtn = document.getElementById('auth-btn');
+      const userName = document.getElementById('user-name');
+      if (user) {
+        userName.textContent = user.name || user.email;
+        authBtn.textContent = 'Logout';
+        authBtn.href = '#';
+        authBtn.onclick = () => { localStorage.removeItem('user'); location.reload(); };
+      }
+
+      if (!user) {
+        document.getElementById('orders-content').innerHTML =
+          '<div class="alert alert-error">Please <a href="auth.html">log in</a> to view your orders.</div>';
+        return;
+      }
+
+      api.getOrders(user.id)
+        .then(orders => {
+          const el = document.getElementById('orders-content');
+          if (orders.length === 0) {
+            el.innerHTML = '<div class="empty-state">No orders yet. <a href="cars.html" class="btn btn-primary" style="margin-top:1rem;">Browse Cars</a></div>';
+            return;
+          }
+          el.innerHTML = `
+            <div class="card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Order ID</th>
+                    <th>Car ID</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${orders.map(o => `
+                    <tr>
+                      <td>${o.id}</td>
+                      <td><a href="cars.html?id=${o.car_id}" style="color:#00d4ff;">${o.car_id}</a></td>
+                      <td>$${o.price.toLocaleString()}</td>
+                      <td>${o.status}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        })
+        .catch(err => document.getElementById('orders-content').innerHTML = `<div class="alert alert-error">${err.message}</div>`);
+    })();
+  </script>
+</body>
+</html>
